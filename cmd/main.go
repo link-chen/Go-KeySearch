@@ -8,6 +8,6 @@ import (
 func main() {
 	dao.InitDataBase()
 	r := Router.InitUserRouter()
-	r.Run(":8080")
+	r.Run()
 
 }

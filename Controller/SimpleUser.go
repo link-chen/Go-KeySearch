@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -100,7 +101,13 @@ func DownLoadFile(c *gin.Context) {
 func Search(c *gin.Context) {
 	var Keyword KeySearchFile
 	c.ShouldBindJSON(&Keyword)
-	files := Util.GetFiles(Keyword.TargetFolderName)
+	currentDir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory:", err)
+		return
+	}
+
+	files := Util.GetFiles(currentDir + "/" + Keyword.TargetFolderName)
 	answer := []int{}
 	filenames := []string{}
 	for i := 0; i < len(files); i++ { //有txt
@@ -109,7 +116,7 @@ func Search(c *gin.Context) {
 		if !strings.Contains(files[i].Name(), last) {
 			continue
 		}
-		doc, _ := document.Open(Keyword.TargetFolderName + "/" + files[i].Name())
+		doc, _ := document.Open(currentDir + "/" + Keyword.TargetFolderName + "/" + files[i].Name())
 		var Temp string
 		for _, para := range doc.Paragraphs() {
 			for _, run := range para.Runs() {
@@ -121,10 +128,6 @@ func Search(c *gin.Context) {
 			filenames = append(filenames, files[i].Name())
 		}
 	}
-
-	for i := 0; i < len(filenames); i++ {
-		fmt.Println("filenames==" + filenames[i])
-	}
 	var fileArray FileArray
 	fileArray.Files = answer
 	fileArray.Names = filenames
@@ -134,13 +137,28 @@ func Search(c *gin.Context) {
 func DownLoadByIndex(c *gin.Context) {
 	var Keyword KeySearchFile
 	c.BindJSON(&Keyword)
-	files := Util.GetFiles(Keyword.TargetFolderName)
-	fmt.Println("Here")
-	filePath := Keyword.TargetFolderName + "/" + files[Keyword.Index].Name()
+	currentDir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory:", err)
+		return
+	}
+	files := Util.GetFiles(currentDir + Keyword.TargetFolderName)
+
+	for i := 0; i < len(files); i++ {
+		fmt.Println(files[i])
+	}
+
+	filePath := currentDir + Keyword.TargetFolderName + "/" + files[Keyword.Index].Name()
 	c.File(filePath)
 }
 
 func ReceiveFile(c *gin.Context) {
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		fmt.Println("Error getting current directory:", err)
+		return
+	}
 	file, err := c.FormFile("file")
 	uploadInfoStr := c.PostForm("uploadInfo")
 	if err != nil {
@@ -150,7 +168,7 @@ func ReceiveFile(c *gin.Context) {
 
 	// 保存文件到服务器
 	fmt.Println(file.Filename)
-	fmt.Println(uploadInfoStr)
+	fmt.Println(currentDir + "/" + uploadInfoStr)
 	dst := fmt.Sprintf("%s/%s", uploadInfoStr, file.Filename)
 	if err := c.SaveUploadedFile(file, dst); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
